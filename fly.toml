@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for ssafy-2024-backend-red-sea-176 on 2024-12-31T13:21:43+09:00
+# fly.toml app configuration file generated for ssafy-2024-backend-patient-dew-8466 on 2025-01-02T20:48:25+09:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'ssafy-2024-backend-red-sea-176'
+app = 'ssafy-2024-backend-patient-dew-8466'
 primary_region = 'nrt'
 
 [build]

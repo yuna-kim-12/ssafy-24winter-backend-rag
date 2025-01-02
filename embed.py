@@ -1,5 +1,4 @@
 import os
-
 from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_pinecone import PineconeVectorStore
@@ -15,8 +14,26 @@ embedding_upstage = UpstageEmbeddings(model="embedding-query")
 pinecone_api_key = os.environ.get("PINECONE_API_KEY")
 pc = Pinecone(api_key=pinecone_api_key)
 # db 이름
-index_name = "galaxy-a35"
-pdf_path = "Galaxy_A_35.pdf"
+index_name = "samsung-pdfs"  # Changed index name to reflect multiple PDFs
+pdf_paths = [ 
+    "삼성물산_패션부문_전문직.pdf",
+    "에스원.pdf",
+    "제일기획.pdf",
+    "삼성물산_패션부문_신입.pdf",
+    "삼성물산_리조트부문.pdf",
+    "삼성물산_건설부문.pdf",
+    "삼성E&A.pdf",
+    "삼성중공업.pdf",
+    "삼성증권.pdf",
+    "삼성카드.pdf",
+    "삼성SDS.pdf",
+    "삼성전기.pdf",
+    "삼성SDI.pdf",
+    "삼성디스플레이.pdf",
+    "삼성전자_DX부문.pdf",
+    "삼성전자_DS부문.pdf",
+]
+
 
 # create new index
 if index_name not in pc.list_indexes().names():
@@ -28,25 +45,24 @@ if index_name not in pc.list_indexes().names():
     )
 
 print("start")
-document_parse_loader = UpstageDocumentParseLoader(
-    pdf_path,
-    output_format='html',  # 결과물 형태 : HTML
-    coordinates=False)  # 이미지 OCR 좌표계 가지고 오지 않기
 
-# parse로 HTML 형태로 변경됨.
-docs = document_parse_loader.load()
+all_splits = []
+for pdf_path in pdf_paths:
+    print(f"Processing: {pdf_path}")
+    document_parse_loader = UpstageDocumentParseLoader(
+        pdf_path,
+        output_format='html',
+        coordinates=False)
 
-# Split the document into chunks
+    docs = document_parse_loader.load()
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=100)
+    splits = text_splitter.split_documents(docs)
+    all_splits.extend(splits)  # Accumulate splits from all PDFs
 
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000,
-    chunk_overlap=100)
-
-# Embed the splits
-
-splits = text_splitter.split_documents(docs)
-
+print("Embedding and storing vectors...")
 PineconeVectorStore.from_documents(
-    splits, embedding_upstage, index_name=index_name
+    all_splits, embedding_upstage, index_name=index_name
 )
 print("end")

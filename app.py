@@ -10,8 +10,6 @@ from langchain_upstage import ChatUpstage
 from langchain_upstage import UpstageEmbeddings
 from pinecone import Pinecone, ServerlessSpec
 from pydantic import BaseModel
-from openai import AsyncOpenAI
-
 
 load_dotenv()
 
@@ -21,16 +19,8 @@ embedding_upstage = UpstageEmbeddings(model="embedding-query")
 
 pinecone_api_key = os.environ.get("PINECONE_API_KEY")
 pc = Pinecone(api_key=pinecone_api_key)
-index_name = "galaxy-a35"
+index_name = "samsung-pdfs"
 
-# create new index
-if index_name not in pc.list_indexes().names():
-    pc.create_index(
-        name=index_name,
-        dimension=4096,
-        metric="cosine",
-        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
-    )
 
 pinecone_vectorstore = PineconeVectorStore(index=pc.Index(index_name), embedding=embedding_upstage)
 
@@ -79,48 +69,8 @@ async def chat_endpoint(req: MessageRequest):
     return {"reply": result['result']}
 
 
-@app.post("/assistant")
-async def assistant_endpoint(req: AssistantRequest):
-    assistant = await openai.beta.assistants.retrieve("asst_hJwuhbyAiStnavrIaRBVUGGS")
-
-    if req.thread_id:
-        # We have an existing thread, append user message
-        await openai.beta.threads.messages.create(
-            thread_id=req.thread_id, role="user", content=req.message
-        )
-        thread_id = req.thread_id
-    else:
-        # Create a new thread with user message
-        thread = await openai.beta.threads.create(
-            messages=[{"role": "user", "content": req.message}]
-        )
-        thread_id = thread.id
-
-    # Run and wait until complete
-    await openai.beta.threads.runs.create_and_poll(
-        thread_id=thread_id, assistant_id=assistant.id
-    )
-
-    # Now retrieve messages for this thread
-    # messages.list returns an async iterator, so let's gather them into a list
-    all_messages = [
-        m async for m in openai.beta.threads.messages.list(thread_id=thread_id)
-    ]
-    print(all_messages)
-
-    # The assistant's reply should be the last message with role=assistant
-    assistant_reply = all_messages[0].content[0].text.value
-
-    return {"reply": assistant_reply, "thread_id": thread_id}
-
-
-@app.get("/health")
-@app.get("/")
-async def health_check():
-    return {"status": "ok"}
-
-
 if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
